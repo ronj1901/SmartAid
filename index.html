@@ -150,16 +150,16 @@
 
     function twilioAjax(){
 
-         var SID = "ACd1a6aa92fe5c440a611b0b084b7b36f8"
-        var Key = "5062f875ab8a02e6931f78db80d201c0"
+         var SID = ""
+        var Key = "5"
 
         $.ajax({
             type: 'POST',
 
             url: 'https://api.twilio.com/2010-04-01/Accounts/' + SID +'/Messages.json',
             data: {
-                "To" : "+15628815062",
-                "From" : "+19093031617",
+                "To" : "+1....",
+                "From" : "+1....",
                 "Body" : "Alert !!! Patient has high chance of heart attack"
             },
             beforeSend: function (xhr) {
