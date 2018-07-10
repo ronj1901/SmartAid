@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Aid Dashboard</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="style.css">
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+     }
+
+     #graph {
+       vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+
+
+  <div class="container">
+    <div class="row">
+      <div class="col">
+
+       <h3>GPS TRACKER</h3>
+         <div id="map">
+         </div>
+
+      </div>
+
+     <div class="col">
+         <div class="heart-rate">
+		  <svg version="1.0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="150px" height="73px" viewBox="0 0 150 73" enable-background="new 0 0 150 73" xml:space="preserve">
+		    <polyline fill="none" stroke="red" stroke-width="3" stroke-miterlimit="10" points="0,45.486 38.514,45.486 44.595,33.324 50.676,45.486 57.771,45.486 62.838,55.622 71.959,9 80.067,63.729 84.122,45.486 97.297,45.486 103.379,40.419 110.473,45.486 150,45.486"
+		    />
+		  </svg>
+		  <div class="fade-in"></div>
+		  <div class="fade-out"></div>
+		   <h3> BPM </h3>
+		   <h1 id="p1">90</h1>
+		</div>
+    </div>
+    <div class="row">
+
+       <h3>DATA VISUALIZATION</h3>
+         <div class="col">
+          <div id="graph">
+          </div>
+
+         </div>
+
+    </div>
+
+
+  </div>
+
+
+
+
+
+  <script src="https://www.gstatic.com/firebasejs/4.13.0/firebase.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script>
+    // Initialize Firebase
+    var config = {
+      apiKey: "",
+      authDomain: "",
+      databaseURL: "https://tracker-1524239762376.firebaseio.com",
+      projectId: "tracker-1524239762376",
+      storageBucket: "tracker-1524239762376.appspot.com",
+      messagingSenderId: "871369091312"
+    };
+    firebase.initializeApp(config);
+  </script>
+
+
+  <script>
+
+    var lat;
+    var longi;
+    var  Xdata = [];  // to store values like [1,2,3,4, 6,7]
+    var  Ydata = [];  // to store values like [88, 89,73, 80]
+    var   send = false;
+    var  bpmRef =  firebase.database().ref().child('BPM');
+    bpmRef.on("value", gotData, errData);
+
+    function gotData(data){
+     ///  console.log(data.val()); // returns object key = > val
+      var bpms = data.val();
+      var keys  = Object.keys(bpms);
+      //console.log(keys);
+      for ( var i = 0; i < keys.length; i++)
+      {
+        var k  = keys[i];
+        var bpm =  bpms[k].bpm;
+        Xdata.push(i+1);
+        Ydata.push(bpm);
+        //console.log(bpm);
+      }
+      plotdata(Xdata, Ydata);
+    }
+
+
+
+    function plotdata(X, Y){
+
+      if (Y[Y.length-1] > 100 ){
+
+          twilioAjax();
+
+      }
+      document.getElementById("p1").innerHTML = Y[Y.length-1];
+      Plotly.plot('graph', [{
+        x:  X,
+       y: Y
+      }], {
+        sliders: [{
+          pad: {
+            t: 30
+          },
+          currentvalue: {
+            xanchor: 'right',
+            prefix: 'color: ',
+            font: {
+              color: '#888',
+              size: 10
+            }
+          },
+          steps: [{
+            label: 'red',
+            method: 'restyle',
+            args: ['line.color', 'red']
+          }, {
+            label: 'green',
+            method: 'restyle',
+            args: ['line.color', 'green']
+          }, {
+            label: 'blue',
+            method: 'restyle',
+            args: ['line.color', 'blue']
+          }]
+        }]
+      });
+
+    }  // end of plot data function
+
+
+    function twilioAjax(){
+
+         var SID = "ACd1a6aa92fe5c440a611b0b084b7b36f8"
+        var Key = "5062f875ab8a02e6931f78db80d201c0"
+
+        $.ajax({
+            type: 'POST',
+
+            url: 'https://api.twilio.com/2010-04-01/Accounts/' + SID +'/Messages.json',
+            data: {
+                "To" : "+15628815062",
+                "From" : "+19093031617",
+                "Body" : "Alert !!! Patient has high chance of heart attack"
+            },
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader ("Authorization", "Basic " + btoa(SID + ':' + Key));
+            },
+            success: function(data) {
+                console.log(data);
+            },
+            error: function(data) {
+                console.log(data);
+            }
+        });
+
+       setTimeout(twilioAjax, 100000);
+
+    }
+
+
+    function errData(err){
+      console.log("Error occured ");
+      console.log(err);
+    }
+    function initMap(){
+        var marker, i;
+        var rootRef = firebase.database().ref().child('Locations');
+
+        rootRef.on("value", function(snapshot) {
+
+
+                 lat = snapshot.child('latitude').val();
+                 longi = snapshot.child('longitude').val();
+                 console.log(snapshot.child('latitude').val());
+
+
+                    var map = new google.maps.Map(document.getElementById('map'), {
+                      zoom: 14,
+                      center: new google.maps.LatLng(lat, longi),
+                      mapTypeId: google.maps.MapTypeId.ROADMAP
+                    });
+
+
+                    var infowindow = new google.maps.InfoWindow();
+
+
+                      marker = new google.maps.Marker({
+                          position: new google.maps.LatLng(lat, longi),
+
+                          map: map
+                      });
+
+
+              }, function (error) {
+                 console.log("Error retriving data: " + error.code);
+              });
+
+
+    }
+
+
+  </script>
+   <!-- Replace the value of the key parameter with your own API key. -->
+  <script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyACdycFSaa97uBn9YjLZ4eBKAenuoK2UqQ&callback=initMap">
+  </script>
+
+
+</body>
+</html>
